@@ -12,9 +12,28 @@ window.configure(background="lightgrey")
 # Character pool
 characters = string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 
+#Title_lbl = tk.Label(window, text="Spltochy's Password Generator", font="Bender 30 bold", bg="lightgrey")
+#Title_lbl.pack()
+
+canvas = tk.Canvas(window, width=640, height=100, bg="lightgrey", highlightthickness=0)
+canvas.pack()
+
+text = "Spltochy's Password Generator"
+font = ("Bender", 30, "bold")
+x, y = 320, 50  # center position
+
+# Drawwing the border(yeah im not gonna lie I literally just googled for this)
+outline_color = "black"
+for dx in (-1,0,1):
+    for dy in (-1,0,1):
+        if dx != 0 or dy != 0:
+            canvas.create_text(x+dx, y+dy, text=text, font=font, fill=outline_color)
+
+# Draw the main text on top
+canvas.create_text(x, y, text=text, font=font, fill="white")
+
 # Label asking for the passwords length
-Length_lbl = tk.Label(window, text="Set the password length", font="Bender 30 bold")
-Length_lbl.configure(background="lightgrey")
+Length_lbl = tk.Label(window, text="Set the password length", font="Bender 20 bold", bg="lightgrey")
 Length_lbl.pack()
 
 # Textbox for the users input, used for the passwords length
