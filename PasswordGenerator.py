@@ -7,49 +7,75 @@ import tkinter.messagebox as mb
 window = tk.Tk()
 window.title("Password Generator")
 window.geometry("640x480")
+window.configure(background="lightgrey")
 
 # Character pool
 characters = string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 
-Length_lbl = tk.Label(window, text="Set the password length")
+# Label asking for the passwords length
+Length_lbl = tk.Label(window, text="Set the password length", font="Bender 30 bold")
+Length_lbl.configure(background="lightgrey")
 Length_lbl.pack()
 
-Length_entry = tk.Entry(window)
-Length_entry.pack()
-Pw_entry = tk.Entry(window, state="readonly", width=50)
-Pw_entry.pack(pady=10)
-Copy_lbl = tk.Label(window, text="", fg="blue")
-Copy_lbl.pack()
+# Textbox for the users input, used for the passwords length
+Length_entry = tk.Entry(window, font="Bender 20", justify="center")
+Length_entry.pack(pady=10)
 
+# Textbox that the generated password gets printed to
+Pw_entry = tk.Entry(window, font="Bender 15", justify="center", state="readonly", width=-1)
+#Pw_entry.pack(pady=10)
+
+# label that will notify when a password gets copied to clipboard
+Copy_lbl = tk.Label(window, text="", font="Bender", fg="blue")
+
+# Function: Generates a password with user inputed length control
 def Generate_password():
+    """Generate a password with the user defined length and display it"""
     try:
         PwLength = int(Length_entry.get())
     except ValueError:
         mb.showerror("Error", "Enter a valid number please.")
         return
-    
+    if PwLength > 100:
+        mb.showerror("Error", "Password length cannot exceed 100 characters.")
+        return
+    elif PwLength < 1:
+        mb.showerror("Error","Password must contain atleast 1 character")
+
     password = []
     for Pwl in range(PwLength):
         random_char = secrets.choice(characters)
         password.append(random_char)
     password = "".join(password)
 
-    #mb.showinfo("Password Generated", password)
+    if not Pw_entry.winfo_ismapped():
+        Pw_entry.pack()
+
+    # Displaying the generated password
     Pw_entry.config(state="normal")
     Pw_entry.delete(0, tk.END)
     Pw_entry.insert(0,password)
     Pw_entry.config(state="readonly")
 
+# Logic for the copy to clipboard function
 def copy_password():
+    """Copy the password to clipboard and update the label"""
     window.clipboard_clear()
     window.clipboard_append(Pw_entry.get())
     window.update()
+    """Make the label visible for 3 seconds and then hide it again"""
+    if not Copy_lbl.winfo_ismapped():
+        Copy_lbl.pack(pady= 10)
+    window.after(3000, Copy_lbl.pack_forget)
     Copy_lbl.config(text="Password has been copied to clipboard.")
 
-Pw_generate_btn = tk.Button(window, text="Generate Password", command=Generate_password)
+
+# Button for generating the password
+Pw_generate_btn = tk.Button(window, text="Generate Password", font="Bender 15", command=Generate_password)
 Pw_generate_btn.pack()
 
-Copy_btn = tk.Button(window, text="Copy To Clipboard", command=lambda: copy_password())
+# Button to copy the password straight to clipboard
+Copy_btn = tk.Button(window, text="Copy To Clipboard", font="Bender 15", command=lambda: copy_password())
 Copy_btn.pack(pady=5)
 
 window.mainloop()
