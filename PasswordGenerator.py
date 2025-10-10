@@ -18,7 +18,7 @@ characters = string.ascii_lowercase + string.ascii_uppercase + string.digits + s
 canvas = tk.Canvas(window, width=640, height=100, bg="lightgrey", highlightthickness=0)
 canvas.pack()
 
-text = "Spltochy's Password Generator"
+text = "Splotchy's Password Generator"
 font = ("Bender", 30, "bold")
 x, y = 320, 50  # center position
 
