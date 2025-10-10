@@ -41,11 +41,13 @@ Length_entry = tk.Entry(window, font="Bender 20", justify="center")
 Length_entry.pack(pady=10)
 
 # Textbox that the generated password gets printed to
-Pw_entry = tk.Entry(window, font="Bender 15", justify="center", state="readonly", width=-1)
+Pw_entry = tk.Entry(window, font="Bender 20", justify="center", state="readonly", width=-1, show="*")
 #Pw_entry.pack(pady=10)
 
 # label that will notify when a password gets copied to clipboard
 Copy_lbl = tk.Label(window, text="", font="Bender", fg="blue")
+
+Show_password_bool = tk.BooleanVar(value=True)
 
 # Function: Generates a password with user inputed length control
 def Generate_password():
@@ -69,6 +71,8 @@ def Generate_password():
 
     if not Pw_entry.winfo_ismapped():
         Pw_entry.pack()
+    if not Showpw_check.winfo_ismapped():
+        Showpw_check.pack(pady= 5)
 
     # Displaying the generated password
     Pw_entry.config(state="normal")
@@ -88,6 +92,12 @@ def copy_password():
     window.after(3000, Copy_lbl.pack_forget)
     Copy_lbl.config(text="Password has been copied to clipboard.")
 
+def Toggle_Pw_Show():
+    if Show_password_bool.get():
+        Pw_entry.config(show="*")
+    else:
+        Pw_entry.config(show="")
+
 
 # Button for generating the password
 Pw_generate_btn = tk.Button(window, text="Generate Password", font="Bender 15", command=Generate_password)
@@ -96,5 +106,7 @@ Pw_generate_btn.pack()
 # Button to copy the password straight to clipboard
 Copy_btn = tk.Button(window, text="Copy To Clipboard", font="Bender 15", command=lambda: copy_password())
 Copy_btn.pack(pady=5)
+
+Showpw_check = tk.Checkbutton(window, text="Hide Password", font="Bender 15", variable=Show_password_bool, command=Toggle_Pw_Show, bg="lightgrey")
 
 window.mainloop()
