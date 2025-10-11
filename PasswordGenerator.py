@@ -2,11 +2,14 @@ import string
 import secrets
 import tkinter as tk
 import tkinter.messagebox as mb
+from tkinter import PhotoImage
+import webbrowser
 
 # === Window Setup ===
 window = tk.Tk()
 window.title("Splotchy's Password Generator")
 window.geometry("800x320")
+window.resizable(width=False, height=False)
 window.configure(background="lightgrey")
 
 # === Title Canvas ===
@@ -174,6 +177,11 @@ def Password_generation_options():
     if Include_symbols_bool.get():
         characters += string.punctuation
 
+# Opens the project Github repository
+def Open_Project_Repo():
+    url = "https://github.com/SplotchyXD/PasswordGenerator"
+    webbrowser.open(url)
+
 # ===== Interface Buttons =====
 # Button that generates the password by using the Generate_password command
 Pw_generate_btn = tk.Button(
@@ -226,6 +234,17 @@ Showpw_check = tk.Checkbutton(
     variable=Show_password_bool,
     command=Toggle_Pw_Show,
     bg="lightgrey")
+
+Github_Logo = PhotoImage(file="kuva_2025-10-11_164832397.png")
+
+Github_btn = tk.Button(
+    window,
+    image=Github_Logo,
+    bg="lightgray",
+    activebackground="lightgray",
+    command=Open_Project_Repo
+)
+Github_btn.place(x=725, y=245)
 
 # Start event loop
 window.mainloop()
