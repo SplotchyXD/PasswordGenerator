@@ -235,7 +235,7 @@ Showpw_check = tk.Checkbutton(
     command=Toggle_Pw_Show,
     bg="lightgrey")
 
-Github_Logo = PhotoImage(file="kuva_2025-10-11_164832397.png")
+Github_Logo = PhotoImage(file="Github logo.png")
 
 Github_btn = tk.Button(
     window,
