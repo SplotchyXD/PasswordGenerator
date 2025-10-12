@@ -4,6 +4,25 @@ import tkinter as tk
 import tkinter.messagebox as mb
 from tkinter import PhotoImage
 import webbrowser
+import sqlite3 as sql
+from datetime import datetime
+
+# === Database Startup ===
+def Startup_db():
+    """Create or connect to the SQLite database and check if the table exists."""
+    con = sql.connect("Passwords.db")
+    cursor = con.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS Passwords(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            date_created TEXT NOT NULL)
+    """)
+    con.commit()
+    con.close()
+Startup_db()
+
 
 # === Window Setup ===
 window = tk.Tk()
@@ -110,7 +129,7 @@ def Generate_password():
         mb.showerror("Error", "Enter a valid number please.")
         return
     if PwLength < 1:
-        PwLength =1
+        PwLength = 1
     elif PwLength > 50:
         PwLength = 50
 
@@ -133,13 +152,15 @@ def Generate_password():
         password.append(random_char)
     password = "".join(password)
 
-    # Makes the password textbox, password hidden button and copy password button visible
+    # Makes the additional widgets vissible
     if not Pw_entry.winfo_ismapped():
         Pw_entry.place(x=15, y=150)
     if not Showpw_check.winfo_ismapped():
         Showpw_check.place(x=15, y=190)
     if not Copy_btn.winfo_ismapped():
-        Copy_btn.place(x=15,y=230)
+        Copy_btn.place(x=190,y=230)
+    if not Save_password_btn.winfo_ismapped():
+        Save_password_btn.place(x=15,y=230)
 
     # Displaying the generated password
     Pw_entry.config(state="normal")
@@ -147,25 +168,97 @@ def Generate_password():
     Pw_entry.insert(0,password)
     Pw_entry.config(state="readonly")
 
+def Save_password_window_popup():
+    """Open a new window to save the current generated password."""
+
+    # Creating the the popup window as a global variable
+    global Save_window
+    Save_window = tk.Toplevel(window)
+    Save_window.title("Save Generated Password")
+    Save_window.geometry("480x240")
+    Save_window.configure(bg="lightgrey")
+
+    Username_lbl = tk.Label(Save_window, text="Username: ", font="Bender 15 bold", bg="lightgrey")
+    Username_lbl.place(x=30, y=30)
+
+    # Username input field
+    Username_entry = tk.Entry(Save_window, font="Bender 15", width=25)
+    Username_entry.place(x=150, y=32)
+
+    # Making the password variables global
+    global Password_lbl
+    global Password_entry
+    Password_lbl = tk.Label(Save_window, text="Password: ", font="Bender 15 bold", bg="lightgrey", state="readonly")
+    Password_lbl.place(x=30, y=80)
+    
+    # Password input field
+    Password_entry = tk.Entry(Save_window, font="Bender 15", width=25, show="*")
+    Password_entry.place(x=150, y=82)
+    Password_entry.insert(0, Pw_entry.get())
+
+    # Logic for saving a given username and the generated password
+    def Save_password_data():
+        Username = Username_entry.get()
+        Password = Password_entry.get()
+        
+        if not Username or not Password:
+            mb.showerror("Error", "Both fields must be filled.")
+            return
+        
+        # Opening a connection to the db and sending the data to it
+        con = sql.connect("Passwords.db")
+        cursor = con.cursor()
+        cursor.execute(
+            "INSERT INTO Passwords (username, password, date_created) VALUES (?, ?, ?)",
+            (Username, Password, datetime.now().strftime("%d-%m-%Y %H:%M:%S"))
+        )
+        con.commit()
+        con.close()
+
+        # Showing the user that the password has been saved to the db
+        mb.showinfo("Saved", f"Password for '{Username}' has been saved succesfully.")
+        Save_window.destroy()
+
+    Save_btn = tk.Button(
+        Save_window,
+        text="Save Password",
+        font="Bender 15 bold",
+        command=Save_password_data
+    )
+    Save_btn.place(x=150, y=180)
+
+    Hide_btn = tk.Checkbutton(
+        Save_window,
+        text="Hide Password",
+        font="Bender 15 bold",
+        variable=Show_password_bool,
+        command=Toggle_Pw_Show
+    )
+    Hide_btn.place(x=150, y=120)
+
 # Logic for the copy to clipboard function
 def copy_password():
     """Copy the generated password to the clipboard and briefly display a confirmation label."""
     window.clipboard_clear()
     window.clipboard_append(Pw_entry.get())
     window.update()
+
     # Make the label visible for 3 seconds and then hide it again
     if not Copy_lbl.winfo_ismapped():
-        Copy_lbl.place(x=210, y=235)
+        Copy_lbl.place(x=190, y=193)
     window.after(3000, Copy_lbl.place_forget)
     Copy_lbl.config(text="Password has been copied to clipboard.", font="Bender 15 bold")
 
 # Logic for enabling/disabling the asterisks in the password textbox
 def Toggle_Pw_Show():
-    if Show_password_bool.get():
-        Pw_entry.config(show="*")
-    else:
-        Pw_entry.config(show="")
-
+    Show_char = "*" if Show_password_bool.get() else ""
+    Pw_entry.config(show=Show_char)
+    try:
+        if Save_window.winfo_exists() and Save_window.winfo_viewable():
+            Password_entry.config(show=Show_char)
+    except NameError:
+        pass
+  
 # Logic for the option checkboxes
 def Password_generation_options():
     global characters
@@ -233,7 +326,8 @@ Showpw_check = tk.Checkbutton(
     font="Bender 15 bold",
     variable=Show_password_bool,
     command=Toggle_Pw_Show,
-    bg="lightgrey")
+    bg="lightgrey"
+    )
 
 Github_Logo = PhotoImage(file="Github logo.png")
 
@@ -245,6 +339,13 @@ Github_btn = tk.Button(
     command=Open_Project_Repo
 )
 Github_btn.place(x=725, y=245)
+
+Save_password_btn = tk.Button(
+    window,
+    text="Save Password",
+    font="Bender 15 bold",
+    command=Save_password_window_popup
+)
 
 # Start event loop
 window.mainloop()
