@@ -188,7 +188,7 @@ def Save_password_window_popup():
     # Making the password variables global
     global Password_lbl
     global Password_entry
-    Password_lbl = tk.Label(Save_window, text="Password: ", font="Bender 15 bold", bg="lightgrey", state="readonly")
+    Password_lbl = tk.Label(Save_window, text="Password: ", font="Bender 15 bold", bg="lightgrey")
     Password_lbl.place(x=30, y=80)
     
     # Password input field
