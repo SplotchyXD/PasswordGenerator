@@ -84,9 +84,12 @@ def Master_password_exists():
     return count > 0
 
 def Save_master_password(password):
-    """Hash the password and save it to the database"""
+    """Hash the password and save it to the database, Using PBKDF2 with 480000 iterations makes brute force attacks not practical"""
+    # Generate salt 
+    # Used to ensure the identical passwords return different encryptions
     Salt = os.urandom(32)
 
+    # Hashing password using PBKDF2_HMAC_SHA256 with the massive(480,000) iteration count
     Password_hash = hashlib.pbkdf2_hmac(
         "sha256",
         password.encode(),
@@ -129,7 +132,11 @@ def Master_password_verification(password):
     return Input_hash == Stored_hash
 
 def Encryption_key_derive(password):
-    """Derive an encryption key from the master password"""
+    """
+    Derive an encryption key from the master password.
+    uses the same salt as password verification to ensure the user always
+    generates the same key for the same password
+    """
     con = sql.connect("Passwords.db")
     cursor = con.cursor()
     cursor.execute("SELECT salt FROM MasterPassword WHERE id = 1")
@@ -317,7 +324,7 @@ def Create_saved_passwords_window():
             data_text = f"Username: {row[0]} | Password: {decrypted_password} | Created: {row[2]}"
             listbox.insert(tk.END, data_text)
             listbox.update_idletasks()
-            time.sleep(0.1)
+            time.sleep(0.1) # Visual effect: makes it look like the passwords are getting loaded in
 
     Get_passwords()
 
@@ -342,7 +349,7 @@ def Create_saved_passwords_window():
             return
         
         select_text = listbox.get(select[0])
-        password = select_text.split(" | ")[1].replace("password: ", "")
+        password = select_text.split(" | ")[1].replace("Password: ", "")
 
         Saved_passwords_window.clipboard_clear()
         Saved_passwords_window.clipboard_append(password)
