@@ -720,7 +720,7 @@ Passwords_btn = tk.Button(
     font="Bender 15 bold",
     command=Create_saved_passwords_window
 )
-Passwords_btn.place(x=500, y=245)
+Passwords_btn.place(x=540, y=275)
 
 # calling the function for the login window or the Create master password window 
 if Master_password_exists():
