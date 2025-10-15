@@ -12,7 +12,7 @@ from base64 import b64encode, b64decode
 import time
 from cryptography.fernet import Fernet
 
-Encyption_key = None
+Encryption_key = None
 
 def Create_master_password_window():
     """Window for creating the master password on the first startup"""
@@ -178,7 +178,6 @@ def Submit_login(password_entry, login_window):
 
         login_window.destroy() # Closes the log in window after getting the correct master password
         window.deiconify() # Will put the main window on top
-        #mb.showinfo("Success", "Logged in succesfully.")
     else:
         mb.showerror("Error", "Password was incorrect.")
         password_entry.delete(0, tk.END)
@@ -195,10 +194,6 @@ def Submit_master_password(password_entry, Confirm_entry, setup_window):
     if password !=confirm:
         mb.showerror("Error", "Passwords do not match.")
         return
-    
-    #if len(password) < 8:
-    #    mb.showerror("Error", "Passwords must be at least 8 character long.")
-    #    return
     
     Save_master_password(password)
 
@@ -338,7 +333,6 @@ def Create_saved_passwords_window():
 
         Saved_passwords_window.clipboard_clear()
         Saved_passwords_window.clipboard_append(username)
-        print("Copied", f"Username '{username}' copied to cliboard." )
     
     def Copy_password():
         """Copy the password from the row"""
@@ -352,7 +346,6 @@ def Create_saved_passwords_window():
 
         Saved_passwords_window.clipboard_clear()
         Saved_passwords_window.clipboard_append(password)
-        print("Copied", "Password copied to cliboard." )
 
 
     Copy_username_btn = tk.Button(
@@ -722,7 +715,9 @@ Passwords_btn = tk.Button(
 )
 Passwords_btn.place(x=540, y=275)
 
-# calling the function for the login window or the Create master password window 
+# Check if master password exists
+# if yes: display login window
+# if not: display the master password window(first time setup)
 if Master_password_exists():
     Login_window_popup()
 else:
