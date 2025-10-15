@@ -6,6 +6,210 @@ from tkinter import PhotoImage
 import webbrowser
 import sqlite3 as sql
 from datetime import datetime
+import hashlib
+import os
+from base64 import b64encode, b64decode
+import time
+from cryptography.fernet import Fernet
+
+Encyption_key = None
+
+def Create_master_password_window():
+    """Window for creating the master password on the first startup"""
+    window.withdraw() # Hiding the main window from the user
+
+    Setup_window = tk.Toplevel()
+    Setup_window.title("Create Master Password")
+    Setup_window.geometry("640x320")
+    Setup_window.config(bg="lightgrey")
+
+    Setup_window.protocol("WM_DELETE_WINDOW", lambda: None) # Remove the window's x button function
+
+    # === Interface Widgets ===
+    Title_lbl = tk.Label(
+        Setup_window,
+        text="Create Master Password",
+        font="Bender 30 bold",
+        bg="lightgrey",
+        justify="center"
+    )
+    Title_lbl.place(x=20, y= 20)
+
+    password_lbl = tk.Label(
+        Setup_window,
+        text="Password",
+        font="Bender 20 bold",
+        bg="lightgrey"
+    )
+    password_lbl.place(x=20, y=70)
+    
+    password_entry = tk.Entry(
+        Setup_window,
+        font="Bender 20 bold",
+        show="*",
+        width=25
+    )
+    password_entry.place(x=20, y=110)
+
+    Confirm_lbl = tk.Label(
+        Setup_window,
+        text="Confirm Password:",
+        font="Bender 20 bold",
+        bg="lightgrey"
+    )
+    Confirm_lbl.place(x=20, y=150)
+    Confirm_entry = tk.Entry(
+        Setup_window,
+        font="Bender 20 bold",
+        show="*",
+        width=25
+    )
+    Confirm_entry.place(x=20, y=190)
+
+    Submit_btn = tk.Button(
+        Setup_window,
+        text="Save Password",
+        font="Bender 15 bold",
+        command=lambda: Submit_master_password(password_entry, Confirm_entry, Setup_window)
+    )
+    Submit_btn.place(x=460, y=190)
+
+def Master_password_exists():
+    """Check if user has setup their master password"""
+    con = sql.connect("Passwords.db")
+    cursor = con.cursor()
+    cursor.execute("SELECT COUNT(*) FROM MasterPassword")
+    count = cursor.fetchone()[0]
+    con.close()
+    return count > 0
+
+def Save_master_password(password):
+    """Hash the password and save it to the database"""
+    Salt = os.urandom(32)
+
+    Password_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode(),
+        Salt,
+        480000
+    )
+    Salt_text = b64encode(Salt).decode()
+    Hash_text = b64encode(Password_hash).decode()
+
+    con = sql.connect("Passwords.db")
+    cursor = con.cursor()
+    cursor.execute(
+        "INSERT INTO MasterPassword (id, salt, password_hash) VALUES (1, ?, ?)",
+        (Salt_text, Hash_text)
+    )
+    con.commit()
+    con.close()
+
+def Master_password_verification(password):
+    """Check if user inputed password matchess the stored hash"""
+    con = sql.connect("Passwords.db")
+    cursor = con.cursor()
+    cursor.execute("SELECT salt, password_hash FROM MasterPassword WHERE id = 1")
+    result = cursor.fetchone()
+    con.close()
+
+    if not result:
+        return False
+    
+    Stored_salt = b64decode(result[0])
+    Stored_hash =b64decode(result[1])
+
+    Input_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode(),
+        Stored_salt,
+        480000
+    )
+
+    return Input_hash == Stored_hash
+
+def Encryption_key_derive(password):
+    """Derive an encryption key from the master password"""
+    con = sql.connect("Passwords.db")
+    cursor = con.cursor()
+    cursor.execute("SELECT salt FROM MasterPassword WHERE id = 1")
+    result = cursor.fetchone()
+    con.close()
+
+    Stored_salt = b64decode(result[0])
+
+    key = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode(),
+        Stored_salt,
+        480000
+    )
+    return b64encode(key)
+
+def Encrypt_password(password):
+    """Encrypt the users password using the encryption key"""
+    if Encryption_key is None:
+        raise Exception("Not logged in - no encryption key available to use")
+    
+    fernet = Fernet(Encryption_key)
+    encrypted = fernet.encrypt(password.encode())
+    return encrypted.decode()
+
+def Decrypt_password(encrypted_password):
+    """Decrypt the users password using the encryption key"""
+    if Encryption_key is None:
+        raise Exception("Not logged in - no encryption key available to use")
+    
+    fernet = Fernet(Encryption_key)
+    decrypted = fernet.decrypt(encrypted_password.encode())
+    return decrypted.decode()
+
+def Submit_login(password_entry, login_window):
+    """Handels users login input"""
+    password = password_entry.get()
+    if not password:
+        mb.showerror("Error","Please enter your password. ")
+        return
+    
+    if Master_password_verification(password):
+
+        global Encryption_key
+        Encryption_key = Encryption_key_derive(password)
+
+        login_window.destroy() # Closes the log in window after getting the correct master password
+        window.deiconify() # Will put the main window on top
+        #mb.showinfo("Success", "Logged in succesfully.")
+    else:
+        mb.showerror("Error", "Password was incorrect.")
+        password_entry.delete(0, tk.END)
+
+def Submit_master_password(password_entry, Confirm_entry, setup_window):
+    """Validate and save the master password"""
+    password = password_entry.get()
+    confirm = Confirm_entry.get()
+
+    if not password or not confirm:
+        mb.showerror("Error", "Both fields must be filled.")
+        return
+    
+    if password !=confirm:
+        mb.showerror("Error", "Passwords do not match.")
+        return
+    
+    #if len(password) < 8:
+    #    mb.showerror("Error", "Passwords must be at least 8 character long.")
+    #    return
+    
+    Save_master_password(password)
+
+    global Encryption_key
+    Encryption_key = Encryption_key_derive(password)
+
+    setup_window.destroy() # Closes the master password window after saving the master password
+    window.deiconify() # Will put the main window on top
+
+    mb.showinfo("Success", "Master password has been created succesfully. ")
+
 
 # === Database Startup ===
 def Startup_db():
@@ -21,9 +225,151 @@ def Startup_db():
     """)
     con.commit()
     con.close()
+
+def Create_Master_password_table():
+    """Create a table that stores the users master password hash and salt"""
+    con = sql.connect("Passwords.db")
+    cursor = con.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS MasterPassword(
+            id INTEGER PRIMARY KEY,
+            salt TEXT NOT NULL,
+            password_hash TEXT NOT NULL)
+    """)
+    con.commit()
+    con.close()
+
 Startup_db()
+Create_Master_password_table()
+
+def Login_window_popup():
+    window.withdraw() # Hiding the main window from the user
+
+    Login_window = tk.Toplevel()
+    Login_window.title("Create Master Password")
+    Login_window.geometry("640x320")
+    Login_window.config(bg="lightgrey")
+    Login_window.protocol("WM_DELETE_WINDOW", lambda: None)
+
+            
+    Title_lbl = tk.Label(
+        Login_window,
+        text="Welcome Back",
+        font="Bender 30 bold",
+        bg="lightgrey",
+        justify="center"
+    )
+    Title_lbl.place(x=20, y= 20)
+
+    Title_lbl2 = tk.Label(
+        Login_window,
+        text="Sign In",
+        font="Bender 30 bold",
+        bg="lightgrey",
+        justify="center"
+    )
+    Title_lbl2.place(x=20, y= 70)
+
+    password_lbl = tk.Label(
+        Login_window,
+        text="Password",
+        font="Bender 20 bold",
+        bg="lightgrey"
+    )
+    password_lbl.place(x=20, y=130)
+    password_entry = tk.Entry(
+        Login_window,
+        font="Bender 20 bold",
+        show="*",
+        width=25
+    )
+    password_entry.place(x=20, y=170)
+
+    Login_btn = tk.Button(
+        Login_window,
+        text="Login",
+        font="Bender 15 bold",
+        command=lambda: Submit_login(password_entry, Login_window)
+    )
+    Login_btn.place(x=20, y=210)
+
+def Create_saved_passwords_window():
+    """Open the saved passwords window and display the decrypted versions of the saved passwords"""
+    Saved_passwords_window = tk.Toplevel()
+    Saved_passwords_window.title("Saved Passwords")
+    Saved_passwords_window.geometry("800x320")
+    Saved_passwords_window.resizable(width=False, height=False)
+    Saved_passwords_window.configure(background="lightgrey")
+    Saved_passwords_window.attributes("-topmost", True)
+
+    listbox = tk.Listbox(
+    Saved_passwords_window,
+    width= 200,
+    justify="left",
+    font="Bender 10 bold"
+    )
+    listbox.pack()
+
+    def Get_passwords():
+        con = sql.connect("Passwords.db")
+        cursor = con.cursor()
+        for row in cursor.execute("SELECT username, password, date_created FROM Passwords"):
+            try:
+                decrypted_password = Decrypt_password(row[1])
+            except:
+                decrypted_password = ("Decryption Failed.")
+
+            data_text = f"Username: {row[0]} | Password: {decrypted_password} | Created: {row[2]}"
+            listbox.insert(tk.END, data_text)
+            listbox.update_idletasks()
+            time.sleep(0.1)
+
+    Get_passwords()
+
+    def Copy_username():
+        """Copy the username from the row"""
+        select = listbox.curselection()
+        if not select:
+            mb.showwarning("Warning", "Please select a username entry first.")
+            return
+        
+        select_text = listbox.get(select[0])
+        username = select_text.split(" | ")[0].replace("Username: ", "")
+
+        Saved_passwords_window.clipboard_clear()
+        Saved_passwords_window.clipboard_append(username)
+        print("Copied", f"Username '{username}' copied to cliboard." )
+    
+    def Copy_password():
+        """Copy the password from the row"""
+        select = listbox.curselection()
+        if not select:
+            mb.showwarning("Warning", "Please select a password entry first.")
+            return
+        
+        select_text = listbox.get(select[0])
+        password = select_text.split(" | ")[1].replace("password: ", "")
+
+        Saved_passwords_window.clipboard_clear()
+        Saved_passwords_window.clipboard_append(password)
+        print("Copied", "Password copied to cliboard." )
 
 
+    Copy_username_btn = tk.Button(
+        Saved_passwords_window,
+        text="Copy Username",
+        font="Bender 15 bold",
+        command=Copy_username
+    )
+    Copy_username_btn.place(x=10, y=170)
+
+    Copy_password_btn = tk.Button(
+        Saved_passwords_window,
+        text="Copy Password",
+        font="Bender 15 bold",
+        command= Copy_password
+    )
+    Copy_password_btn.place(x=180, y=170)
 # === Window Setup ===
 window = tk.Tk()
 window.title("Splotchy's Password Generator")
@@ -178,21 +524,41 @@ def Save_password_window_popup():
     Save_window.geometry("480x240")
     Save_window.configure(bg="lightgrey")
 
-    Username_lbl = tk.Label(Save_window, text="Username: ", font="Bender 15 bold", bg="lightgrey")
+    # ===== Interface Widgets =====
+    Username_lbl = tk.Label(
+        Save_window,
+        text="Username: ",
+        font="Bender 15 bold",
+        bg="lightgrey"
+    )
     Username_lbl.place(x=30, y=30)
 
     # Username input field
-    Username_entry = tk.Entry(Save_window, font="Bender 15", width=25)
+    Username_entry = tk.Entry(
+        Save_window,
+        font="Bender 15 bold",
+        width=25
+    )
     Username_entry.place(x=150, y=32)
 
     # Making the password variables global
     global Password_lbl
     global Password_entry
-    Password_lbl = tk.Label(Save_window, text="Password: ", font="Bender 15 bold", bg="lightgrey")
+    Password_lbl = tk.Label(
+        Save_window,
+        text="Password: ",
+        font="Bender 15 bold",
+        bg="lightgrey"
+    )
     Password_lbl.place(x=30, y=80)
     
     # Password input field
-    Password_entry = tk.Entry(Save_window, font="Bender 15", width=25, show="*")
+    Password_entry = tk.Entry(
+        Save_window,
+        font="Bender 15",
+        width=25,
+        show="*"
+    )
     Password_entry.place(x=150, y=82)
     Password_entry.insert(0, Pw_entry.get())
 
@@ -208,9 +574,10 @@ def Save_password_window_popup():
         # Opening a connection to the db and sending the data to it
         con = sql.connect("Passwords.db")
         cursor = con.cursor()
+        encrypted_password = Encrypt_password(Password)
         cursor.execute(
             "INSERT INTO Passwords (username, password, date_created) VALUES (?, ?, ?)",
-            (Username, Password, datetime.now().strftime("%d-%m-%Y %H:%M:%S"))
+            (Username, encrypted_password, datetime.now().strftime("%d-%m-%Y %H:%M:%S"))
         )
         con.commit()
         con.close()
@@ -327,7 +694,7 @@ Showpw_check = tk.Checkbutton(
     variable=Show_password_bool,
     command=Toggle_Pw_Show,
     bg="lightgrey"
-    )
+)
 
 Github_Logo = PhotoImage(file="Github logo.png")
 
@@ -346,6 +713,20 @@ Save_password_btn = tk.Button(
     font="Bender 15 bold",
     command=Save_password_window_popup
 )
+
+Passwords_btn = tk.Button(
+    window,
+    text="Saved Passwords",
+    font="Bender 15 bold",
+    command=Create_saved_passwords_window
+)
+Passwords_btn.place(x=500, y=245)
+
+# calling the function for the login window or the Create master password window 
+if Master_password_exists():
+    Login_window_popup()
+else:
+    Create_master_password_window()
 
 # Start event loop
 window.mainloop()
