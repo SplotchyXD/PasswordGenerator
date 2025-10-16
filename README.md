@@ -21,7 +21,7 @@ Give a ⭐️ if this project helped you!
 ## 📝 License
 
 Copyright © 2025 [Splotchy](https://github.com/SplotchyXD).<br />
-This project is [[MIT](https://mit--license.org)] licensed.
+This project is [[MIT](https://mit-license.org)] licensed.
 
 ***
 _This README was generated with ❤️ by [readme-md-generator](https://github.com/kefranabg/readme-md-generator)_
