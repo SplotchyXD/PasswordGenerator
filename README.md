@@ -7,6 +7,8 @@
 </p>
 
 > Password Manager that I wrote during my free time with some assistance in hashing from an AI
+> 
+Comes packaged with the font Bender which is used in the program and needs to be downloaded (you only need the normal and bold versions for it to work)
 
 ## Author
 
